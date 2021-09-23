@@ -9,3 +9,21 @@ THRESHHOLD=0.5
 # 正负样本比例
 NEGPOS_RATIO=3.0
 
+# 学习率
+LEARNING_RATE=0.01
+
+# 随机梯度下降时的超参数
+MOMENTUM=0.9
+WEIGHT_DECAY=0.5e-4  # 防止过拟合，调节复杂度对模型损失函数的影响，若weight decay很大，则复杂的模型损失函数的值也就大
+
+# BATCH
+BATCH_SIZE = 64
+# EPOCH
+EPOCH = 100
+
+all_classes=[
+    "test","test2"
+]
+
+# 模型保存位置
+MODEL_SAVE_PATH="test.pth"
