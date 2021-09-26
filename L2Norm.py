@@ -5,6 +5,7 @@ import torch
 class L2Norm(nn.Module):
     def __init__(self, n_channels, scale):
         """
+        L2正则化：x_i/求和(x_k^2),正则化后，将每个值放大为原来的scale倍
         :param n_channels: 卷积后维度
         :param scale: 放大倍数
         """
@@ -21,3 +22,4 @@ class L2Norm(nn.Module):
         norm = sum.sqrt() + self.eps # 加eps为了避免在除的时候除以0
         x = torch.div(x, norm)
         out = self.weight.unsqueeze(0).unsqueeze(2).unsqueeze(3).expand_as(x) * x  # unsqueeze拓展维度，等于就是x中的每个值乘以了scale
+        return out

@@ -23,5 +23,5 @@ def generate_priory_box(img_size=300):
                       math.sqrt(min_size[k] * max_size[k]) / img_size]
             for ratio in ASPECT_RATIOS[k]:
                 boxes += [x_ctr, y_ctr, min_size[k] / math.sqrt(ratio) / img_size,
-                          min_size * math.sqrt(ratio) / img_size]
+                          min_size[k] * math.sqrt(ratio) / img_size]
     return torch.Tensor(boxes).view(-1, 4)

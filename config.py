@@ -22,7 +22,7 @@ BATCH_SIZE = 64
 EPOCH = 100
 
 all_classes=[
-    "test","test2"
+    "rect_5","rect_6"
 ]
 
 # 模型保存位置

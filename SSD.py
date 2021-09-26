@@ -1,10 +1,11 @@
+import torch
 from torch import nn
 from prioryBox import generate_priory_box
 from L2Norm import L2Norm
 from config import *
 
 
-class SSD(nn.Moudule):
+class SSD(nn.Module):
     def __init__(self, img_size: int, cls: list):
         super(SSD, self).__init__()
         self.objClasses = cls
@@ -66,38 +67,33 @@ class SSD(nn.Moudule):
         # loc 3*3卷积生成位置
         self.locConv = []
         self.locConv.append(
-            nn.Conv2d(self.VGG16_before.out_channels, (2 + len(ASPECT_RATIOS[0])) * 4, (3, 3), padding=1))
+            nn.Conv2d(512, (2 + len(ASPECT_RATIOS[0])) * 4, (3, 3), padding=1))
         self.locConv.append(
-            nn.Conv2d(self.VGG16_before.out_channels, (2 + len(ASPECT_RATIOS[1])) * 4, (3, 3), padding=1))
+            nn.Conv2d(1024, (2 + len(ASPECT_RATIOS[1])) * 4, (3, 3), padding=1))
         self.locConv.append(
-            nn.Conv2d(self.conv7.out_channels, (2 + len(ASPECT_RATIOS[2])) * 4, (3, 3), padding=1))
+            nn.Conv2d(512, (2 + len(ASPECT_RATIOS[2])) * 4, (3, 3), padding=1))
         self.locConv.append(
-            nn.Conv2d(self.conv8.out_channels, (2 + len(ASPECT_RATIOS[3])) * 4, (3, 3), padding=1))
+            nn.Conv2d(256, (2 + len(ASPECT_RATIOS[3])) * 4, (3, 3), padding=1))
         self.locConv.append(
-            nn.Conv2d(self.conv9.out_channels, (2 + len(ASPECT_RATIOS[4])) * 4, (3, 3), padding=1))
+            nn.Conv2d(256, (2 + len(ASPECT_RATIOS[4])) * 4, (3, 3), padding=1))
         self.locConv.append(
-            nn.Conv2d(self.conv10.out_channels, (2 + len(ASPECT_RATIOS[5])) * 4, (3, 3), padding=1))
-        self.locConv.append(
-            nn.Conv2d(self.pool11.out_channels, (2 + len(ASPECT_RATIOS[6])) * 4, (3, 3), padding=1))
+            nn.Conv2d(256, (2 + len(ASPECT_RATIOS[5])) * 4, (3, 3), padding=1))
 
         # cls 3*3卷积生成分类
         self.clsConv = []
         self.clsConv.append(
-            nn.Conv2d(self.VGG16_before.out_channels, (2 + len(ASPECT_RATIOS[0])) * len(self.objClasses), (3, 3),
+            nn.Conv2d(512, (2 + len(ASPECT_RATIOS[0])) * len(self.objClasses), (3, 3),
                       padding=1))
         self.clsConv.append(
-            nn.Conv2d(self.VGG16_before.out_channels, (2 + len(ASPECT_RATIOS[1])) * len(self.objClasses), (3, 3),
-                      padding=1))
+            nn.Conv2d(1024, (2 + len(ASPECT_RATIOS[1])) * len(self.objClasses), (3, 3), padding=1))
         self.clsConv.append(
-            nn.Conv2d(self.conv7.out_channels, (2 + len(ASPECT_RATIOS[2])) * len(self.objClasses), (3, 3), padding=1))
+            nn.Conv2d(512, (2 + len(ASPECT_RATIOS[2])) * len(self.objClasses), (3, 3), padding=1))
         self.clsConv.append(
-            nn.Conv2d(self.conv8.out_channels, (2 + len(ASPECT_RATIOS[3])) * len(self.objClasses), (3, 3), padding=1))
+            nn.Conv2d(256, (2 + len(ASPECT_RATIOS[3])) * len(self.objClasses), (3, 3), padding=1))
         self.clsConv.append(
-            nn.Conv2d(self.conv9.out_channels, (2 + len(ASPECT_RATIOS[4])) * len(self.objClasses), (3, 3), padding=1))
+            nn.Conv2d(256, (2 + len(ASPECT_RATIOS[4])) * len(self.objClasses), (3, 3), padding=1))
         self.clsConv.append(
-            nn.Conv2d(self.conv10.out_channels, (2 + len(ASPECT_RATIOS[5])) * len(self.objClasses), (3, 3), padding=1))
-        self.clsConv.append(
-            nn.Conv2d(self.pool11.out_channels, (2 + len(ASPECT_RATIOS[6])) * len(self.objClasses), (3, 3), padding=1))
+            nn.Conv2d(256, (2 + len(ASPECT_RATIOS[5])) * len(self.objClasses), (3, 3), padding=1))
 
     def forward(self, x):
         sources = []  # sources为每个层计算出的feature_map
@@ -107,8 +103,9 @@ class SSD(nn.Moudule):
         sources.append(s)
 
         # 计算到conv7
-        conv6 = self.conv6(self.VGG16_after(s))
-        conv7 = self.VGG16_after(conv6)
+        vgg16_after=self.VGG16_after(s)
+        conv6 = self.conv6(vgg16_after)
+        conv7 = self.conv7(conv6)
         sources.append(conv7)
 
         # 计算到conv8
@@ -132,8 +129,14 @@ class SSD(nn.Moudule):
         locs=[]
         for f_map,l_conv,c_conv in zip(sources,self.locConv,self.clsConv):
             clss.append(c_conv(f_map).permute(0,2,3,1).contiguous())# 最后一维为分类数
-            locs.append(l_conv(f_map).permute(0,2,3,1).contiguous())# 最后一维为坐标数*4
-        return clss,locs,self.priory_boxes
+            # contiguous()方法首先拷贝了一份张量在内存中的地址，然后将地址按照形状改变后的张量的语义进行排列
+            locs.append(l_conv(f_map).permute(0,2,3,1).contiguous())
+
+        # 转化为Tensor类型
+        pred_conf=torch.cat([o.view(o.size(0),-1,len(self.objClasses)) for o in clss],dim=1)  # 转化为(batch_size,[10,n_priory,n_classes])
+        pred_loc=torch.cat([o.view(o.size(0),-1,4)for o in locs],dim=1)  # 转化为(batch_size,[10,n_priory,4])
+        # print(pred_loc.size(),pred_conf.size())
+        return pred_conf,pred_loc,self.priory_boxes
 
 
 

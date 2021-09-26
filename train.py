@@ -14,13 +14,13 @@ def train():
 
     print("Load DataSet ......")
     dateset=MyDataSet()
-    dataLoader=DataLoader(dateset,BATCH_SIZE,shuffle=True)
+    dataLoader=DataLoader(dateset,BATCH_SIZE,shuffle=False)
     print("Begin Training ......")
     for k in range(EPOCH):
         total_loss=0
         for data,label in dataLoader:
             print(data.size(),label.size())
-            clss,locs,prioryBoxes=ssd_net(data)
+            clss,locs,prioryBoxes=ssd_net(data)# (batch_size,[10,n_priory,n_classes]),(batch_size,[10,n_priory,4])
             loss=criterion(clss,locs,prioryBoxes,label)
             total_loss+=loss
             optimizer.zero_grad()
