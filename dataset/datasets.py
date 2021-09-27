@@ -39,7 +39,11 @@ class MyDataSet(Dataset):
         # 转换为Tensor
         toTensor = transforms.ToTensor()
 
-        return toTensor(img), torch.Tensor(res).view((-1,5))
+        res=torch.Tensor(res).view(-1,5)
+        res[:,0:4:2]/=img.size[0]
+        res[:,1:4:2]/=img.size[1]
+
+        return toTensor(img),res
 
     def __len__(self):
         return len(self.labels_files)

@@ -33,7 +33,6 @@ class MultiboxLoss(nn.Module):
         # 包装变量
         loc_t = Variable(loc_t, requires_grad=False)
         conf_t = Variable(conf_t, requires_grad=False)
-
         # 选出非背景框，即IOU>0的框
         pos = conf_t > 0
         pos_idx = pos.unsqueeze(pos.dim()).expand_as(
