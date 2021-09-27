@@ -33,11 +33,11 @@ class SSD(nn.Module):
             nn.Conv2d(512, 512, (3, 3), (1, 1), 1),
             nn.ReLU(),
             nn.Conv2d(512, 512, (3, 3), (1, 1), 1),
-            nn.ReLU(),
-            nn.MaxPool2d(2, stride=2)
+            nn.ReLU()
         )
         # conv5
         self.VGG16_after = nn.Sequential(
+            nn.MaxPool2d(2, stride=2),
             nn.Conv2d(512, 512, (3, 3), (1, 1), 1),
             nn.ReLU(),
             nn.Conv2d(512, 512, (3, 3), (1, 1), 1),

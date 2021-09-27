@@ -21,10 +21,10 @@ def train():
         for data,label in dataLoader:
             print(data.size(),label.size())
             clss,locs,prioryBoxes=ssd_net(data)# (batch_size,[10,n_priory,n_classes]),(batch_size,[10,n_priory,4])
-            loss=criterion(clss,locs,prioryBoxes,label)
-            total_loss+=loss
+            loss_c,loss_l=criterion(clss,locs,prioryBoxes,label)
+            loss=loss_l+loss_c
             optimizer.zero_grad()
-            loss.backward()
+            loss.backward(torch.ones_like(loss))  # loss需要是一个标量
             optimizer.step()
         if k%10==0:
             print(f"iter:{k},loss:{total_loss}")

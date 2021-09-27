@@ -22,7 +22,7 @@ class MultiboxLoss(nn.Module):
         num_priroy = priory_boxes.size(0)
         num_classes = self.num_classes
 
-        conf_t = torch.Tensor(num, num_priroy)
+        conf_t = torch.Tensor(num, num_priroy)  # 存放的是每个先验框对应的目标物体的序号，0表示背景
         loc_t = torch.Tensor(num, num_priroy, 4)
         for idx in range(num):
             # 对每个数据操作,为每一个先验框匹配一个真值框
@@ -32,9 +32,9 @@ class MultiboxLoss(nn.Module):
             conf_t = conf_t.cuda()
         # 包装变量
         loc_t = Variable(loc_t, requires_grad=False)
-        conf_t = Variable(conf_t, requests_grad=False)
+        conf_t = Variable(conf_t, requires_grad=False)
 
-        # 选出非背景框，即label>0的框
+        # 选出非背景框，即IOU>0的框
         pos = conf_t > 0
         pos_idx = pos.unsqueeze(pos.dim()).expand_as(
             loc_t)  # (batch_size,num_priory)->(batch_size,num_priory,1)->(batch_size,num_priory,4)
@@ -44,29 +44,35 @@ class MultiboxLoss(nn.Module):
         # 计算位置损失
         loss_loc = self.smooth_L1_loss(loc_pred, loc_t)
 
-        batch_conf = pred_conf.view(-1, self.num_classes)  # (batch_size*num_classes,4)
+        batch_conf = pred_conf.view(-1, self.num_classes)  # (batch_size*num_classes,n_classes)
+        # 参考 https://www.freesion.com/article/9127332548/
         loss_conf = self.log_sum_exp(batch_conf) - \
                     batch_conf.gather(dim=1, index=conf_t.view(-1, 1).long())  # 第k行的第i列，由原始数据的第k行的index[k][i]列决定
-
         # Hard Negative Mining
+        loss_conf=loss_conf.view(num,-1)
         loss_conf[pos] = 0  # 过滤掉正样本
         loss_conf = loss_conf.view(num, -1)  # (batch_size, n_priory)
+        # 一次sort：得到的index是按顺序排的索引
+        # 两次sort：得到原Tensor的映射，排第几的数字变为排名
         _, loss_idx = loss_conf.sort(1, descending=True)  # 将loss按照从大到小排序
         _, idx_rank = loss_conf.sort(1)  # 将loss从大到小排序返回的序号按照列优先进行排序
         num_pos = pos.long().sum(1, keepdims=True)  # 计算正样本数
         num_neg = torch.clamp(NEGPOS_RATIO * num_pos, max=num_pos.size(1) - 1)  # 负样本数
-        neg = idx_rank < num_neg.expand_as(idx_rank)  # ？？？？？
+        neg = idx_rank < num_neg.expand_as(idx_rank)  # 筛选出排名小于负样本数的样本，结果中为True的为筛选出的样本
 
         pos_idx = pos.unsqueeze(2).expand_as(pred_conf)
         neg_idx = neg.unsqueeze(2).expand_as(pred_conf)
+        # conf_p为选出的正样本和负样本
         conf_p = pred_conf[(pos_idx + neg_idx).gt(0)].view(-1, self.num_classes)  # gt(0)大于0则为1，小于0则为0
-        targets_weighted = conf_t[(pos_idx + neg_idx).gt(0)]
-        loss_c = nn.functional.cross_entropy(conf_p, targets_weighted, size_average=False)
+        targets_weighted = conf_t[(pos + neg).gt(0)]
+        # 参考 https://www.cnblogs.com/marsggbo/p/10401215.html
+        loss_c = nn.functional.cross_entropy(conf_p, targets_weighted.long(), size_average=False)  # 交叉熵计算
 
-        N = num_pos.sum()
+        # Sum of losses: L(x,c,l,g) = (Lconf(x, c) + αLloc(x,l,g)) / N
+        N = num_pos.data.sum()
         loss_loc /= N
-        loss_conf /= N
-        return loss_loc, loss_conf
+        loss_c /= N
+        return loss_loc, loss_c
 
     def match(self, truth_boxes: torch.Tensor, priory_boxes: torch.Tensor, labels: torch.Tensor, loc_t: torch.Tensor,
               conf_t: torch.Tensor, idx):
@@ -174,18 +180,8 @@ class MultiboxLoss(nn.Module):
         loss[loss_index_part2] = abs_y_loss[loss_index_part2] - 0.5
         return torch.sum(loss, dim=-1)  # 最后一维
 
-    def log_loss(self, y_pred: torch.Tensor, y_true):
-        """
-        :param y_pred: (batch_size,n_boxes,n_classed)
-        :param y_true: (batch_size,n_boxes,n_classed)
-        :return: (batch_size,n_boxes)
-        """
-        # 先计算softmax的值
-        exp_y_pred = torch.exp(y_pred)
-        exp_sum_y_pred = torch.sum(exp_y_pred, dim=-1)
-        softmax_y_pred = torch.div(exp_y_pred, exp_sum_y_pred)
-        return torch.sum(y_true * torch.log(softmax_y_pred), dim=-1)
 
-    def log_sum_exp(self, X: torch.Tensor):
-        x_max = X.max()
-        return torch.log(torch.sum(torch.exp(X - x_max), dim=1, keepdim=True)) + x_max
+    def log_sum_exp(self,x:torch.Tensor):
+        x_max=x.detach().max()
+        return torch.log(torch.sum(torch.exp(x-x_max),1,keepdim=True))+x_max
+
