@@ -97,9 +97,9 @@ class MultiboxLoss(nn.Module):
         best_priory_idx.squeeze_(0)
 
         # 对于一个gt框对应的最佳先验框，置其IOU值为2,表示最佳匹配
-        best_gt_overlap.index_fill(0, best_priory_idx, 2)  # 用2填充，表示最佳先验框
+        best_gt_overlap=best_gt_overlap.index_fill(0, best_priory_idx, 2)  # 用2填充，表示最佳先验框
         for j in range(best_priory_idx.size(0)):
-            best_gt_idx[best_priory_idx[j]] = j  # j为gt框编号，best_priory_idx[j]为先验框编号\
+            best_gt_idx[best_priory_idx[j]] = j  # j为gt框编号，best_priory_idx[j]为先验框编号
 
         # 由于传入进来的labels的类别是从0开始的，SSD中认为0应该是背景，所以，需要对labels进行加一
         conf = torch.Tensor([labels[best_gt_idx[i]] + 1 for i in range(best_gt_idx.size(0))]).view(-1,1)
@@ -162,7 +162,7 @@ class MultiboxLoss(nn.Module):
                            boxes_gt[:, :2].unsqueeze(0).expand(A, B, 2))  # 左上角坐标的较大值
         clamp = torch.clamp(max_xy - min_xy, min=0)  # 将输入input张量每个元素的夹紧到区间 [min,max][min,max]，并返回结果到一个新张量。此处无需限制max
         size_cross = clamp[:, :, 0] * clamp[:, :, 1]
-        return size_cross / size_total - size_cross
+        return size_cross / (size_total - size_cross)
 
     def smooth_L1_loss(self, y_pred: torch.Tensor, y_true):
         """

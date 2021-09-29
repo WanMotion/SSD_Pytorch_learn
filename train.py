@@ -23,6 +23,7 @@ def train():
             clss,locs,prioryBoxes=ssd_net(data)# (batch_size,[10,n_priory,n_classes]),(batch_size,[10,n_priory,4])
             loss_c,loss_l=criterion(clss,locs,prioryBoxes,label)
             loss=loss_l+loss_c
+            total_loss+=loss
             optimizer.zero_grad()
             loss.backward(torch.ones_like(loss))  # loss需要是一个标量
             optimizer.step()
