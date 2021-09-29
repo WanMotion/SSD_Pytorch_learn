@@ -22,7 +22,11 @@ BATCH_SIZE = 64
 EPOCH = 100
 
 all_classes=[
-    "rect_5","rect_6"
+    'aeroplane', 'bicycle', 'bird', 'boat',
+    'bottle', 'bus', 'car', 'cat', 'chair',
+    'cow', 'diningtable', 'dog', 'horse',
+    'motorbike', 'person', 'pottedplant',
+    'sheep', 'sofa', 'train', 'tvmonitor'
 ]
 
 # 模型保存位置

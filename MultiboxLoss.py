@@ -10,12 +10,12 @@ class MultiboxLoss(nn.Module):
         self.num_classes = num_classes
         self.use_gpu = use_gpu
 
-    def forward(self, pred_conf: torch.Tensor, pred_loc: torch.Tensor, priory_boxes: torch.Tensor, truth: torch.Tensor):
+    def forward(self, pred_conf: torch.Tensor, pred_loc: torch.Tensor, priory_boxes: torch.Tensor, truth: list):
         """
         :param pred_conf: 预测的置信度，(batch_size,n_priory,n_classes)
         :param pred_loc: 预测的位置, (batch_size,n_priory,4)
         :param priory_boxes: 先验框,(n_priory,4)
-        :param truth: 真值框及其类别(batch_size,n_objects,5) 第五个数是类别
+        :param truth: 真值框及其类别(batch_size)(n_objects,5) 第五个数是类别
         :return: 返回损失值
         """
         num = pred_loc.size(0)  # batch大小
@@ -26,7 +26,7 @@ class MultiboxLoss(nn.Module):
         loc_t = torch.Tensor(num, num_priroy, 4)
         for idx in range(num):
             # 对每个数据操作,为每一个先验框匹配一个真值框
-            self.match(truth[idx, :, :4], priory_boxes, truth[idx, :, 4], loc_t, conf_t, idx)
+            self.match(truth[idx][ :, :4], priory_boxes, truth[idx][ :, 4], loc_t, conf_t, idx)
         if self.use_gpu:
             loc_t = loc_t.cuda()
             conf_t = conf_t.cuda()
@@ -91,15 +91,15 @@ class MultiboxLoss(nn.Module):
         # 为每一个先验框匹配一个gt框
         best_gt_overlap, best_gt_idx = torch.max(IOU, dim=1, keepdim=True)
 
-        best_gt_overlap.squeeze_(0)
-        best_gt_idx.squeeze_(0)
-        best_priory_overlap.squeeze_(1)
-        best_priory_idx.squeeze_(1)
+        best_gt_overlap.squeeze_(1)
+        best_gt_idx.squeeze_(1)
+        best_priory_overlap.squeeze_(0)
+        best_priory_idx.squeeze_(0)
 
         # 对于一个gt框对应的最佳先验框，置其IOU值为2,表示最佳匹配
         best_gt_overlap.index_fill(0, best_priory_idx, 2)  # 用2填充，表示最佳先验框
         for j in range(best_priory_idx.size(0)):
-            best_gt_idx[best_priory_idx[j]] = j  # j为gt框编号，best_priory_idx[j]为先验框编号
+            best_gt_idx[best_priory_idx[j]] = j  # j为gt框编号，best_priory_idx[j]为先验框编号\
 
         # 由于传入进来的labels的类别是从0开始的，SSD中认为0应该是背景，所以，需要对labels进行加一
         conf = torch.Tensor([labels[best_gt_idx[i]] + 1 for i in range(best_gt_idx.size(0))]).view(-1,1)
