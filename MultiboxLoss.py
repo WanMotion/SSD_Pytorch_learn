@@ -177,7 +177,7 @@ class MultiboxLoss(nn.Module):
         loss = torch.Tensor(y_pred.shape)
         loss[loss_index_part1] = square_loss[loss_index_part1] * 0.5
         loss[loss_index_part2] = abs_y_loss[loss_index_part2] - 0.5
-        return torch.sum(loss, dim=-1)  # 最后一维
+        return torch.sum(torch.sum(loss, dim=-1),dim=-1)  # 最后一维
 
 
     def log_sum_exp(self,x:torch.Tensor):
