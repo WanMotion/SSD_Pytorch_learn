@@ -18,7 +18,10 @@ def pred():
     SSD_net.eval()
     for d in dataloader:
         imgs, paths = d
-        pred_conf, pred_loc, _ = SSD_net(imgs)  # (batch_size,n_priory,n_classes), (batch_size,n_priory,4)
+        pred_conf, pred_loc, priory_boxes = SSD_net(imgs)  # (batch_size,n_priory,n_classes), (batch_size,n_priory,4)
+        # 解码loc
+        for i in range(len(paths)):
+            pred_loc[i]=decode(pred_loc[i],priory_boxes)
         conf_softmax = torch.nn.functional.softmax(pred_conf, dim=-1)
         conf_softmax_max, conf_softmax_idx = torch.max(conf_softmax, dim=-1)  # (batch_size,n_priory)
         conf_softmax_idx=conf_softmax_idx+1
@@ -27,23 +30,20 @@ def pred():
             img_i=cv2.imread(paths[i])
             width=img_i.shape[0]
             height=img_i.shape[1]
+            h=0
             for j in range(1,len(all_classes)+1):
                 # 选出每个类的conf和loc
-                conf=conf_softmax_max[i,conf_softmax_idx==j]
-                loc=pred_loc[i,conf_softmax_idx==j,:]
+                conf=conf_softmax_max[i,conf_softmax_idx[i,:]==j]
+                loc=pred_loc[i,conf_softmax_idx[i,:]==j,:]
                 keep,count=nms(conf,loc)
+                # print(loc.size(),keep.size(),count)
                 for k in range(count):
                     if conf[keep[k]]>PRED_MIN_THRESHHOLD:
-                        img_i=cv2.rectangle(img_i,(loc[keep[k],0]*width,loc[keep[k],1])*height,(loc[keep[k],2]*width,loc[keep[k],3]*height),(255,0,0),thickness=4)
-                        img_i=cv2.putText(img_i,f"{all_classes[j-1]}:{conf[keep[k]]}",(loc[keep[k],0]*width,loc[keep[k],1]*height),cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,0))
+                        img_i=cv2.rectangle(img_i,(int(loc[keep[k],0]*width),int(loc[keep[k],1]*height)),(int(loc[keep[k],2]*width),int(loc[keep[k],3]*height)),(255,0,0),thickness=2)
+                        img_i=cv2.putText(img_i,f"{all_classes[j-1]}:{conf[keep[k]]}",(int(loc[keep[k],0]*width),int(loc[keep[k],1]*height)),cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,0))
+                        h+=1
+                        print(loc[keep[k]])
             cv2.imwrite(os.path.join(PRED_PIC_OUTPUT,os.path.basename(paths[i])),img_i)
-
-
-
-
-
-
-
 
 
 def bacth_dealer(batch):
@@ -97,3 +97,12 @@ def nms(pred_conf: torch.Tensor, pred_loc: torch.Tensor):
         iou = inter / (area[max_idx] + area[i] - inter)
         max_idx = max_idx[iou.le(NMS_THRESHHOLD)]
     return keep, count
+
+def decode(pred_loc:torch.Tensor,priory_boxes:torch.Tensor):
+    boxes=torch.cat((priory_boxes[:,:2]+pred_loc[:,:2]*priory_boxes[:,2:],priory_boxes[:,2:]*torch.exp(pred_loc[:,2:])),1)
+    boxes[:,:2]-=boxes[:,2:]/2
+    boxes[:,2:]+=boxes[:,:2]
+    return boxes
+
+if __name__ == '__main__':
+    pred()
