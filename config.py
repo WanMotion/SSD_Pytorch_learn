@@ -28,6 +28,7 @@ all_classes=[
     'motorbike', 'person', 'pottedplant',
     'sheep', 'sofa', 'train', 'tvmonitor'
 ]
+VARIANCE=[0.1,0.2]
 
 # 模型保存位置
 MODEL_SAVE_PATH="test.pth"

@@ -122,9 +122,9 @@ class MultiboxLoss(nn.Module):
         :return: 返回编码后的坐标，shape:(n_priory,4)
         """
         l_cxcy = (matched_boxes[:, :2] + matched_boxes[:, 2:]) / 2 - priory_boxes[:, :2]  # 先将matched_boxes转换为中心点坐标
-        l_cxcy = l_cxcy / priory_boxes[:, 2:]
+        l_cxcy = l_cxcy / (priory_boxes[:, 2:]*VARIANCE[0])
 
-        l_wh = torch.log((matched_boxes[:, 2:] - matched_boxes[:, :2]) / priory_boxes[:, 2:])
+        l_wh = torch.log((matched_boxes[:, 2:] - matched_boxes[:, :2]) / priory_boxes[:, 2:])/VARIANCE[1]
 
         return torch.cat([l_cxcy, l_wh], dim=1)  # 按照列拼接,拓展列
 

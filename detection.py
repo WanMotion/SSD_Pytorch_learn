@@ -99,7 +99,7 @@ def nms(pred_conf: torch.Tensor, pred_loc: torch.Tensor):
     return keep, count
 
 def decode(pred_loc:torch.Tensor,priory_boxes:torch.Tensor):
-    boxes=torch.cat((priory_boxes[:,:2]+pred_loc[:,:2]*priory_boxes[:,2:],priory_boxes[:,2:]*torch.exp(pred_loc[:,2:])),1)
+    boxes=torch.cat((priory_boxes[:,:2]+pred_loc[:,:2]*priory_boxes[:,2:]*VARIANCE[0],priory_boxes[:,2:]*torch.exp(pred_loc[:,2:]*VARIANCE[1])),1)
     boxes[:,:2]-=boxes[:,2:]/2
     boxes[:,2:]+=boxes[:,:2]
     return boxes
