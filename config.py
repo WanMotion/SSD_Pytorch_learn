@@ -31,3 +31,15 @@ all_classes=[
 
 # 模型保存位置
 MODEL_SAVE_PATH="test.pth"
+
+# 要预测的图片保存的位置
+PRED_PIC_PATH="dataset/pred"
+# 预测结果输出位置
+PRED_PIC_OUTPUT="output"
+
+# 非极大值抑制算法相关参数
+NMS_THRESHHOLD=0.7
+NMS_TOP_K=200
+
+# 预测时置信度的最小值
+PRED_MIN_THRESHHOLD=0.5

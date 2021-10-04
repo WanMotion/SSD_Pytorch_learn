@@ -3,7 +3,6 @@ from torch.utils.data import Dataset
 import os
 import xml.etree.ElementTree as ET
 from config import *
-from PIL import Image
 from torchvision import transforms
 from pretreatment import *
 
@@ -47,3 +46,15 @@ class MyDataSet(Dataset):
 
     def __len__(self):
         return len(self.labels_files)
+
+class DetectionDataset(Dataset):
+    def __init__(self):
+        self.imgs_files=[os.path.join(PRED_PIC_PATH,file) for file in os.listdir(PRED_PIC_PATH)]
+
+    def __getitem__(self, index):
+        transform_resize = Resize()
+        toTensor=transforms.ToTensor()
+        return toTensor(transform_resize(Image.open(self.imgs_files[index]))),self.imgs_files[index]
+
+    def __len__(self):
+        return len(self.imgs_files)
