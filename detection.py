@@ -40,9 +40,9 @@ def pred():
                 for k in range(count):
                     if conf[keep[k]]>PRED_MIN_THRESHHOLD:
                         img_i=cv2.rectangle(img_i,(int(loc[keep[k],0]*width),int(loc[keep[k],1]*height)),(int(loc[keep[k],2]*width),int(loc[keep[k],3]*height)),(255,0,0),thickness=2)
-                        img_i=cv2.putText(img_i,f"{all_classes[j-1]}:{conf[keep[k]]}",(int(loc[keep[k],0]*width),int(loc[keep[k],1]*height)),cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,0))
+                        img_i=cv2.putText(img_i,f"{all_classes[j-1]}:{conf[keep[k]]}",(int(loc[keep[k],0]*width),int(loc[keep[k],1]*height)),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,0))
                         h+=1
-                        print(loc[keep[k]])
+                        print(all_classes[j-1],loc[keep[k]].data,conf[keep[k]].data)
             cv2.imwrite(os.path.join(PRED_PIC_OUTPUT,os.path.basename(paths[i])),img_i)
 
 
